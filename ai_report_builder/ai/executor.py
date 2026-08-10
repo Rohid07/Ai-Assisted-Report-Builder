@@ -44,6 +44,21 @@ def check_allowlist(doctype):
         frappe.throw(f"Doctype '{doctype}' is not enabled for the assistant.")
 
 
+def normalize_filters(filters):
+    """Unwrap over-nested filter lists the model sometimes emits, e.g.
+    [[[["field", ">", 0]]]] -> [["field", ">", 0]]. Frappe expects a list of
+    [field, op, value] (or [doctype, field, op, value]) rows."""
+    while (
+        isinstance(filters, list)
+        and len(filters) == 1
+        and isinstance(filters[0], list)
+        and len(filters[0]) > 0
+        and isinstance(filters[0][0], list)
+    ):
+        filters = filters[0]
+    return filters
+
+
 def validate_filters(filters):
     """§7 — hardened to reject non-list rows and unsupported operators."""
     for f in filters or []:
@@ -92,6 +107,7 @@ def execute_run_query(
     if not frappe.has_permission(doctype, "read"):
         return {"error": "permission_denied", "doctype": doctype}
 
+    filters = normalize_filters(filters)
     validate_filters(filters)
     limit = min(limit or 50, 200)
 

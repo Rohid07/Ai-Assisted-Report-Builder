@@ -22,6 +22,20 @@ Schema context for this session:
 {schema_context}
 """
 
+REPORT_METADATA_PROMPT = """You are naming and describing a saved ERPNext report based on a
+question that was already answered successfully.
+
+Given the original question and the query parameters used, respond
+in this exact JSON shape and nothing else:
+{{
+  "report_name": "<concise title, under 8 words, sentence case>",
+  "description": "<one sentence describing what this report shows>"
+}}
+
+Original question: {question}
+Query used: doctype={doctype}, filters={filters}, fields={fields},
+group_by={group_by}, order_by={order_by}"""
+
 RUN_QUERY_TOOL = {
     "type": "function",
     "function": {

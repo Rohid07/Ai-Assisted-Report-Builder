@@ -5,11 +5,14 @@ answer_question / get_client. Results are capped for the UI (§7: result-table
 truncation cap on rows/columns).
 """
 
+import json
+
 import frappe
 from openai import APIError
 
 from ai_report_builder.ai.provider import get_client
-from ai_report_builder.ai.query import answer_question
+from ai_report_builder.ai.query import answer_question, audit
+from ai_report_builder.ai.report import generate_report_metadata, save_as_report
 
 MAX_ROWS = 100
 MAX_COLS = 20
@@ -48,12 +51,18 @@ def _shape_result(result):
 
 
 @frappe.whitelist()
-def ask(question, provider=None):
-    """Answer a natural-language question. Returns shaped, capped results."""
+def ask(question, provider=None, history=None):
+    """Answer a natural-language question. Returns shaped, capped results.
+    `history` (JSON list of {role, content}) carries prior turns for follow-ups."""
     if not question or not question.strip():
         frappe.throw(frappe._("Please enter a question."))
+    if isinstance(history, str):
+        try:
+            history = json.loads(history)
+        except (ValueError, TypeError):
+            history = None
     try:
-        result = answer_question(question.strip(), provider=provider)
+        result = answer_question(question.strip(), provider=provider, history=history)
     except APIError:
         # Every configured provider failed (rate limit / quota / dead model).
         # Fail soft with guidance instead of a 500 (§Phase 5).
@@ -71,6 +80,21 @@ def ask(question, provider=None):
             }
         )
     return _shape_result(result)
+
+
+@frappe.whitelist()
+def save_report(query_params, question=None):
+    """Save a successful query as a native ERPNext Report Builder record (§4).
+    Generates a title/description via the LLM (best-effort), then persists."""
+    if isinstance(query_params, str):
+        query_params = json.loads(query_params)
+    if not query_params or not query_params.get("doctype"):
+        frappe.throw(frappe._("Nothing to save — run a query first."))
+
+    name, description = generate_report_metadata(question or "", query_params)
+    result = save_as_report(query_params, name, description)
+    audit("save", question or "", params={**query_params, "report_name": result["report_name"]})
+    return result
 
 
 @frappe.whitelist()

@@ -68,19 +68,28 @@ def build_schema_context(only=None):
 
 
 def audit(action, question, params=None, denial=None):
-    """§4.7 audit logging. Minimal logger sink for Phase 1; a dedicated
-    AI Query Log doctype arrives in a later phase."""
-    settings = frappe.get_single("AI Assistant Settings")
-    if not settings.audit_enabled:
-        return
-    entry = {
-        "user": frappe.session.user,
-        "action": action,
-        "question": question,
-        "params": params,
-        "denial": denial,
-    }
-    frappe.logger("ai_report_builder").info(json.dumps(entry, default=str))
+    """§4.7 audit logging — persists an AI Query Log record when enabled.
+    Best-effort: a logging failure must never break the actual query."""
+    try:
+        settings = frappe.get_cached_doc("AI Assistant Settings")
+        if not settings.audit_enabled:
+            return
+        params = params or {}
+        frappe.get_doc(
+            {
+                "doctype": "AI Query Log",
+                "action": action,
+                "log_user": frappe.session.user,
+                "reference_doctype": params.get("doctype") if isinstance(params, dict) else None,
+                "question": question,
+                "parameters": json.dumps(params, default=str),
+                "denial": denial,
+            }
+        ).insert(ignore_permissions=True)
+    except Exception:
+        frappe.logger("ai_report_builder").warning(
+            f"audit failed: {action} / {question}"
+        )
 
 
 class _FakeMsg:
@@ -182,10 +191,25 @@ def _run_tool_calls(question, msg, messages):
     return result, query_params
 
 
-def answer_question(question, provider=None, max_tool_rounds=3):
+HISTORY_TURNS = 6  # cap prior turns fed back (token budget, §Phase 5)
+
+
+def _clean_history(history):
+    """Keep only well-formed user/assistant text turns, most recent HISTORY_TURNS."""
+    clean = []
+    for m in history or []:
+        role = m.get("role")
+        content = m.get("content")
+        if role in ("user", "assistant") and isinstance(content, str) and content.strip():
+            clean.append({"role": role, "content": content})
+    return clean[-HISTORY_TURNS:]
+
+
+def answer_question(question, provider=None, history=None, max_tool_rounds=3):
     """Run one question through the LLM + tool loop. Returns a dict with the
     natural-language answer, the raw rows, and the query params used (so the UI
-    can offer Save as Report in Phase 4)."""
+    can offer Save as Report in Phase 4). `history` carries prior chat turns so
+    follow-up questions ("what about last month?") keep context (§Phase 5)."""
     chain = get_provider_chain(provider)
     if not chain:
         frappe.throw("No LLM provider is configured. Add an API key in AI Assistant Settings.")
@@ -198,6 +222,7 @@ def answer_question(question, provider=None, max_tool_rounds=3):
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_QUERY.format(schema_context=schema_context)},
+        *_clean_history(history),
         {"role": "user", "content": question},
     ]
 

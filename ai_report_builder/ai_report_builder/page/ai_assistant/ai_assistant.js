@@ -51,6 +51,8 @@ class AIAssistant {
 	ask() {
 		const question = (this.$input.val() || "").trim();
 		if (!question) return;
+		this.lastQuestion = question;
+		this.history = this.history || [];
 		this.$input.val("");
 		this.add_message("user", frappe.utils.escape_html(question));
 
@@ -59,10 +61,17 @@ class AIAssistant {
 
 		frappe.call({
 			method: "ai_report_builder.api.ask",
-			args: { question },
+			args: { question, history: JSON.stringify(this.history.slice(-6)) },
 			callback: (r) => {
 				$thinking.remove();
-				if (r.message) this.render_answer(r.message);
+				if (r.message) {
+					this.render_answer(r.message);
+					// Record the turn so follow-up questions keep context.
+					this.history.push({ role: "user", content: question });
+					if (r.message.answer) {
+						this.history.push({ role: "assistant", content: r.message.answer });
+					}
+				}
 			},
 			error: () => {
 				$thinking.remove();
@@ -115,12 +124,7 @@ class AIAssistant {
 			const $btn = $(
 				`<button class="btn btn-xs btn-default ai-save">${__("Save as Report")}</button>`
 			).appendTo($m);
-			$btn.on("click", () =>
-				frappe.show_alert({
-					message: __("Saving as a native Report arrives in Phase 4."),
-					indicator: "blue",
-				})
-			);
+			$btn.on("click", () => this.save_report($btn, msg));
 		} else if (msg.query_params.group_by) {
 			$(
 				`<div class="text-muted small">${__(
@@ -128,6 +132,25 @@ class AIAssistant {
 				)}</div>`
 			).appendTo($m);
 		}
+	}
+
+	save_report($btn, msg) {
+		$btn.prop("disabled", true).text(__("Saving…"));
+		frappe.call({
+			method: "ai_report_builder.api.save_report",
+			args: { query_params: msg.query_params, question: this.lastQuestion || "" },
+			callback: (r) => {
+				const res = r.message || {};
+				$btn.replaceWith(
+					`<div class="ai-saved">${__("Saved as report:")}
+						<a href="${res.url}" target="_blank">${frappe.utils.escape_html(res.report_name)}</a></div>`
+				);
+				frappe.show_alert({ message: __("Report saved."), indicator: "green" });
+			},
+			error: () => {
+				$btn.prop("disabled", false).text(__("Save as Report"));
+			},
+		});
 	}
 
 	render_table(columns, rows) {
