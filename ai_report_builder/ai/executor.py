@@ -100,9 +100,14 @@ def execute_run_query(
 
     # Validate group_by / order_by / aggregate_field against meta (anti-injection).
     if group_by:
-        _validate_plain_field(group_by, valid, sensitive, doctype)
+        _validate_plain_field(group_by.split()[0], valid, sensitive, doctype)
     if order_by:
-        _validate_plain_field(order_by, valid, sensitive, doctype)
+        # order_by is "fieldname [asc|desc]" — validate only the field part.
+        parts = order_by.split()
+        _validate_plain_field(parts[0], valid, sensitive, doctype)
+        direction = parts[1].lower() if len(parts) > 1 else "asc"
+        if direction not in ("asc", "desc"):
+            frappe.throw(f"Invalid sort direction: {parts[1]}")
 
     if aggregate_function:
         if aggregate_function not in AGG_FUNCS:

@@ -83,6 +83,20 @@ class TestRunQueryExecutor(FrappeTestCase):
         self.assertEqual(res["count"], 0)
         self.assertEqual(res["rows"], [])
 
+    def test_order_by_with_direction(self):
+        # "field desc" is valid — must not be rejected as an unknown field.
+        res = execute_run_query(
+            "Customer",
+            fields=["name"],
+            filters=[["customer_name", "like", f"{PREFIX}%"]],
+            order_by="creation desc",
+        )
+        self.assertEqual(res["count"], 3)
+
+    def test_order_by_bad_field_rejected(self):
+        with self.assertRaises(frappe.ValidationError):
+            execute_run_query("Customer", fields=["name"], order_by="nope desc")
+
     def test_aggregation_count_returns_correct_number(self):
         res = execute_run_query(
             "Customer",

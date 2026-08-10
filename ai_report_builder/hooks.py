@@ -137,13 +137,11 @@ after_install = "ai_report_builder.install.after_install"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"AI Assistant Settings": {
+		"on_update": "ai_report_builder.ai.query.clear_schema_cache"
+	}
+}
 
 # Scheduled Tasks
 # ---------------
