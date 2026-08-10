@@ -12,6 +12,7 @@
   "groq_api_key",
   "openrouter_api_key",
   "gemini_api_key",
+  "cerebras_api_key",
   "scope_section",
   "allowed_doctypes",
   "sensitive_fields",
@@ -30,7 +31,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Active Provider",
-   "options": "Groq\nOpenRouter\nGemini\nOllama",
+   "options": "Groq\nOpenRouter\nGemini\nCerebras\nOllama",
    "reqd": 1
   },
   {
@@ -51,6 +52,11 @@
    "fieldname": "gemini_api_key",
    "fieldtype": "Password",
    "label": "Gemini API Key"
+  },
+  {
+   "fieldname": "cerebras_api_key",
+   "fieldtype": "Password",
+   "label": "Cerebras API Key"
   },
   {
    "fieldname": "scope_section",

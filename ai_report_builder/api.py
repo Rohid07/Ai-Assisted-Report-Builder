@@ -76,12 +76,16 @@ def ask(question, provider=None):
 @frappe.whitelist()
 def test_connection(provider=None):
     """Ping the configured LLM provider so the Settings form can verify keys.
-    Never returns the key itself."""
+    Never returns the key itself. Returns a clean status instead of a 500."""
     client, model = get_client(provider)
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": "Reply with the single word: pong"}],
-        max_tokens=5,
-    )
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "Reply with the single word: pong"}],
+            max_tokens=5,
+        )
+    except APIError as e:
+        msg = getattr(e, "message", None) or str(e)
+        return {"ok": False, "model": model, "error": msg}
     reply = (resp.choices[0].message.content or "").strip()
     return {"ok": True, "model": model, "reply": reply}

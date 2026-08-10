@@ -22,9 +22,17 @@ PROVIDER_CONFIG = {
     },
     "Gemini": {
         # Google's OpenAI-compatible endpoint (free tier via AI Studio key).
+        # Use the "-latest" alias so we track the current flash model instead
+        # of a pinned version that gets deprecated (404) with a stale quota.
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
-        "model": "gemini-2.0-flash",
+        "model": "gemini-flash-latest",
         "key_field": "gemini_api_key",
+    },
+    "Cerebras": {
+        # Generous free tier, fast, OpenAI-compatible, strong tool calling.
+        "base_url": "https://api.cerebras.ai/v1",
+        "model": "gpt-oss-120b",
+        "key_field": "cerebras_api_key",
     },
     "Ollama": {
         "base_url": "http://localhost:11434/v1",
