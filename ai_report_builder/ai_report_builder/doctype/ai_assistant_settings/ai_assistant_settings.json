@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-08-10 10:53:48.436669",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "provider_section",
+  "active_provider",
+  "cb_provider",
+  "groq_api_key",
+  "openrouter_api_key",
+  "scope_section",
+  "allowed_doctypes",
+  "sensitive_fields",
+  "audit_section",
+  "audit_enabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "provider_section",
+   "fieldtype": "Section Break",
+   "label": "LLM Provider"
+  },
+  {
+   "default": "Groq",
+   "fieldname": "active_provider",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Active Provider",
+   "options": "Groq\nOpenRouter\nOllama",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cb_provider",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "groq_api_key",
+   "fieldtype": "Password",
+   "label": "Groq API Key"
+  },
+  {
+   "fieldname": "openrouter_api_key",
+   "fieldtype": "Password",
+   "label": "OpenRouter API Key"
+  },
+  {
+   "fieldname": "scope_section",
+   "fieldtype": "Section Break",
+   "label": "Scope & Security"
+  },
+  {
+   "description": "Doctypes the assistant may query. Nothing else is reachable.",
+   "fieldname": "allowed_doctypes",
+   "fieldtype": "Table",
+   "label": "Allowed Doctypes",
+   "options": "AI Allowed Doctype"
+  },
+  {
+   "description": "Fieldnames never sent to or returned from the LLM.",
+   "fieldname": "sensitive_fields",
+   "fieldtype": "Table",
+   "label": "Sensitive Fields",
+   "options": "AI Sensitive Field"
+  },
+  {
+   "fieldname": "audit_section",
+   "fieldtype": "Section Break",
+   "label": "Audit"
+  },
+  {
+   "default": "1",
+   "fieldname": "audit_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Audit Logging"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-08-10 10:53:48.436669",
+ "modified_by": "Administrator",
+ "module": "AI Report Builder",
+ "name": "AI Assistant Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

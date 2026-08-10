@@ -83,7 +83,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "ai_report_builder.install.before_install"
-# after_install = "ai_report_builder.install.after_install"
+after_install = "ai_report_builder.install.after_install"
 
 # Uninstallation
 # ------------

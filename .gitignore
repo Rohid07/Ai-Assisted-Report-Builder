@@ -1,7 +1,27 @@
 .DS_Store
-*.pyc
+*.py[cod]
+*$py.class
 *.egg-info
 *.swp
 tags
 node_modules
 __pycache__
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Build artifacts
+build/
+dist/
+*.egg
+
+# Editors / IDEs
+.idea/
+.vscode/
+
+# Logs
+*.log
