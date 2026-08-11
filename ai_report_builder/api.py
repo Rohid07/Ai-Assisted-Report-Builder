@@ -10,8 +10,15 @@ import json
 import frappe
 from openai import APIError
 
+from ai_report_builder.ai.chat import (
+    new_session_id,
+    save_message,
+    session_history,
+)
+from ai_report_builder.ai.insights import generate_insights
 from ai_report_builder.ai.provider import get_client
 from ai_report_builder.ai.query import answer_question, audit
+from ai_report_builder.ai.rag import answer_doc_question
 from ai_report_builder.ai.report import generate_report_metadata, save_as_report
 
 MAX_ROWS = 100
@@ -51,35 +58,72 @@ def _shape_result(result):
 
 
 @frappe.whitelist()
-def ask(question, provider=None, history=None):
-    """Answer a natural-language question. Returns shaped, capped results.
-    `history` (JSON list of {role, content}) carries prior turns for follow-ups."""
+def ask(question, provider=None, session=None):
+    """Answer a natural-language question in a persistent chat session.
+    Prior turns of the session provide follow-up context (§Phase 5)."""
     if not question or not question.strip():
         frappe.throw(frappe._("Please enter a question."))
-    if isinstance(history, str):
-        try:
-            history = json.loads(history)
-        except (ValueError, TypeError):
-            history = None
+    question = question.strip()
+    session = session or new_session_id()
+
+    history = session_history(session)
+    save_message(session, "Data", "user", question)
+
     try:
-        result = answer_question(question.strip(), provider=provider, history=history)
+        result = answer_question(question, provider=provider, history=history)
     except APIError:
         # Every configured provider failed (rate limit / quota / dead model).
-        # Fail soft with guidance instead of a 500 (§Phase 5).
-        return _shape_result(
-            {
-                "answer": frappe._(
-                    "All configured AI providers are currently unavailable "
-                    "(rate limit or quota reached). Please wait a few minutes, "
-                    "switch the Active Provider in AI Assistant Settings, or run "
-                    "Ollama locally for unlimited use."
-                ),
-                "rows": [],
-                "query_params": {},
-                "error": "provider_unavailable",
-            }
-        )
-    return _shape_result(result)
+        result = {
+            "answer": frappe._(
+                "All configured AI providers are currently unavailable "
+                "(rate limit or quota reached). Please wait a few minutes, "
+                "switch the Active Provider in AI Assistant Settings, or run "
+                "Ollama locally for unlimited use."
+            ),
+            "rows": [],
+            "query_params": {},
+            "error": "provider_unavailable",
+        }
+
+    shaped = _shape_result(result)
+    save_message(
+        session, "Data", "assistant", shaped.get("answer"),
+        query_params=shaped.get("query_params"), savable=shaped.get("savable"),
+    )
+    shaped["session"] = session
+    return shaped
+
+
+@frappe.whitelist()
+def insights(query_params, question=None):
+    """AI summaries & insights over a query's result set (Beyond-MVP #1)."""
+    if isinstance(query_params, str):
+        query_params = json.loads(query_params)
+    try:
+        return generate_insights(question, query_params)
+    except APIError:
+        return {"insights": None, "error": "provider_unavailable"}
+
+
+@frappe.whitelist()
+def ask_docs(question, session=None):
+    """Answer a 'how do I...' question from ingested ERPNext docs (RAG, #6),
+    in its own persistent Docs session (separate from the Data chat)."""
+    if not question or not question.strip():
+        frappe.throw(frappe._("Please enter a question."))
+    question = question.strip()
+    session = session or new_session_id()
+
+    audit("query", question, params={"doctype": "AI Knowledge Chunk"})
+    save_message(session, "Docs", "user", question)
+
+    result = answer_doc_question(question)
+    save_message(
+        session, "Docs", "assistant", result.get("answer"),
+        sources=result.get("sources"),
+    )
+    result["session"] = session
+    return result
 
 
 @frappe.whitelist()

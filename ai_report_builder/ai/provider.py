@@ -71,17 +71,22 @@ def get_provider_chain(provider=None):
     """Ordered [(client, model, name), ...]: active provider first, then any
     other provider with usable credentials — for rate-limit fallback (§Phase 5).
 
-    Ollama is only included when it is the active provider, to avoid dead
-    calls to localhost when no local server is running."""
+    Ollama is always kept as the FINAL fallback: it is local and unlimited, so
+    when every cloud provider is rate-limited/exhausted the assistant still
+    answers. (If the local server is down the attempt fails cleanly and the
+    request falls through to a graceful message.)"""
     settings = frappe.get_single("AI Assistant Settings")
     active = provider or settings.active_provider or "Groq"
     order = [active] + [p for p in PROVIDER_CONFIG if p != active]
 
     chain = []
     for name in order:
-        if name == "Ollama" and active != "Ollama":
-            continue
         made = _make_client(name, settings)
         if made:
             chain.append(made)
+
+    # Keep Ollama last as the unlimited local safety net — unless the user
+    # explicitly chose it as the active provider (then it stays first).
+    if active != "Ollama":
+        chain.sort(key=lambda c: c[2] == "Ollama")
     return chain

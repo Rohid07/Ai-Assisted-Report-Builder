@@ -22,6 +22,30 @@ Schema context for this session:
 {schema_context}
 """
 
+INSIGHTS_PROMPT = """You are a business analyst. Given a question and the ACTUAL result
+rows below, write 2-4 short, concrete insights: notable totals, top/bottom items,
+trends, and any anomalies or outliers.
+
+Strict rules:
+- Use ONLY the numbers and values present in the data. Never invent figures.
+- Be specific (cite the actual values). No preamble, no generic advice.
+- Format as short bullet points starting with "- ".
+- If the data is too sparse for meaningful insight, say so in one line.
+
+Question: {question}
+Data ({row_count} rows shown): {rows}"""
+
+DOC_ANSWER_PROMPT = """You are an ERPNext help assistant. Answer the user's "how do I"
+question using ONLY the documentation context below. If the context does not contain
+the answer, say you don't have that information — do not guess.
+
+Cite the source titles you used in a final line like: Sources: <title>, <title>.
+
+Documentation context:
+{context}
+
+Question: {question}"""
+
 REPORT_METADATA_PROMPT = """You are naming and describing a saved ERPNext report based on a
 question that was already answered successfully.
 

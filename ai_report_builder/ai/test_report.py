@@ -38,10 +38,35 @@ class TestSaveAsReport(FrappeTestCase):
         self.assertEqual(j["sort_order"], "desc")
         # numeric column present → footer total
         self.assertEqual(j["add_total_row"], 1)
-        self.assertEqual(j["filters"], [["status", "=", "Unpaid"]])
+        # filters must be 4-element [doctype, field, op, value] for Report Builder
+        self.assertEqual(j["filters"], [["Sales Invoice", "status", "=", "Unpaid"]])
         # it re-runs
         cols, data = rep.get_data(limit=5)[:2]
         self.assertTrue(cols)
+
+    def test_between_filter_saved_four_element(self):
+        res = save_as_report(
+            {
+                "doctype": "Sales Invoice",
+                "fields": ["name", "posting_date"],
+                "filters": [["posting_date", "between", ["2026-07-01", "2026-07-31"]]],
+            },
+            f"{PREFIX} Between",
+        )
+        j = json.loads(frappe.get_doc("Report", res["report_name"]).json)
+        self.assertEqual(
+            j["filters"],
+            [["Sales Invoice", "posting_date", "between", ["2026-07-01", "2026-07-31"]]],
+        )
+
+    def test_over_nested_filter_normalized_on_save(self):
+        res = save_as_report(
+            {"doctype": "Customer", "fields": ["name"],
+             "filters": [[["customer_group", "=", "Commercial"]]]},
+            f"{PREFIX} Nested",
+        )
+        j = json.loads(frappe.get_doc("Report", res["report_name"]).json)
+        self.assertEqual(j["filters"], [["Customer", "customer_group", "=", "Commercial"]])
 
     def test_no_numeric_column_no_total_row(self):
         res = save_as_report(

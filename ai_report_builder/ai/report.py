@@ -12,7 +12,11 @@ import re
 
 import frappe
 
-from ai_report_builder.ai.executor import _valid_fieldnames, get_sensitive_fields
+from ai_report_builder.ai.executor import (
+    _valid_fieldnames,
+    get_sensitive_fields,
+    normalize_filters,
+)
 from ai_report_builder.ai.prompts import REPORT_METADATA_PROMPT
 from ai_report_builder.ai.provider import get_provider_chain
 
@@ -50,6 +54,21 @@ def generate_report_metadata(question, query_params, provider=None):
     except Exception:
         pass
     return _fallback_name(query_params, question), ""
+
+
+def _report_filters(filters, ref_doctype):
+    """Report Builder stores filters as [doctype, field, operator, value] — 4
+    elements. get_list filters are usually [field, op, value] (3). Convert so
+    saved reports actually apply the filter instead of showing every row."""
+    out = []
+    for f in normalize_filters(filters) or []:
+        if not isinstance(f, (list, tuple)):
+            continue
+        if len(f) == 4:
+            out.append([f[0], f[1], f[2], f[3]])
+        elif len(f) == 3:
+            out.append([ref_doctype, f[0], f[1], f[2]])
+    return out
 
 
 def _report_columns(query_params, ref_doctype):
@@ -108,7 +127,7 @@ def save_as_report(query_params, report_name, description=""):
         "sort_order": sort_order,
         "sort_by_next": None,
         "sort_order_next": "desc",
-        "filters": query_params.get("filters", []),
+        "filters": _report_filters(query_params.get("filters"), ref_doctype),
         "columns": columns,
     }
 

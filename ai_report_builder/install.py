@@ -15,8 +15,56 @@ DEFAULT_SENSITIVE_FIELDS = [
 ]
 
 
+# Starter knowledge base for the docs RAG (Beyond-MVP #6). Users can add more
+# via the AI Knowledge Chunk doctype or api.ingest.
+DEFAULT_ARTICLES = [
+    (
+        "Creating a Sales Invoice",
+        "To create a Sales Invoice in ERPNext, go to Accounts > Sales Invoice > New. "
+        "Select the Customer, add Items with quantity and rate, set the Posting Date "
+        "and Due Date, then Save and Submit. On submission the invoice posts accounting "
+        "entries to the customer's receivable account.",
+    ),
+    (
+        "Recording a payment against an invoice",
+        "To mark a Sales Invoice as paid, open the submitted invoice and click Create > "
+        "Payment. This opens a Payment Entry pre-filled with the outstanding amount. "
+        "Choose the paid-from/paid-to accounts and Submit. The invoice status changes "
+        "from Unpaid or Overdue to Paid once fully settled.",
+    ),
+    (
+        "Scheduling a report by email",
+        "Any saved Report can be emailed on a schedule using ERPNext's Auto Email Report. "
+        "Go to Auto Email Report > New, pick the Report, set the frequency (daily, weekly, "
+        "monthly), the recipients, and the format (CSV, Excel, or PDF). Enable it and the "
+        "system sends the report automatically on schedule.",
+    ),
+    (
+        "Exporting a report",
+        "Open any Report and use the Menu button. Choose Export to download the data as "
+        "CSV or Excel, or Print > PDF to produce a PDF. Report Builder reports inherit "
+        "this export functionality with no extra setup.",
+    ),
+]
+
+
 def after_install():
     seed_defaults()
+    seed_knowledge()
+
+
+def seed_knowledge(force=False):
+    """Seed starter how-to articles for the docs RAG."""
+    from ai_report_builder.ai.rag import ingest
+
+    if not force and frappe.db.count("AI Knowledge Chunk"):
+        print("Knowledge base already populated, skipping.")
+        return
+    total = 0
+    for title, content in DEFAULT_ARTICLES:
+        if not frappe.db.exists("AI Knowledge Chunk", {"title": title}):
+            total += ingest(title, content, source="Starter docs")
+    print(f"Seeded {total} knowledge chunks.")
 
 
 def seed_defaults(force=False):
