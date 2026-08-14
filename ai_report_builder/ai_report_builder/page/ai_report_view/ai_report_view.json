@@ -1,15 +1,15 @@
 {
  "content": null,
- "creation": "2026-08-10 12:36:08.056059",
+ "creation": "2026-08-11 10:56:11.886470",
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-08-14 10:29:04.645355",
+ "modified": "2026-08-14 10:29:05.000470",
  "modified_by": "Administrator",
  "module": "AI Report Builder",
- "name": "ai-assistant",
+ "name": "ai-report-view",
  "owner": "Administrator",
- "page_name": "ai-assistant",
+ "page_name": "ai-report-view",
  "roles": [
   {
    "role": "System Manager"
@@ -22,5 +22,5 @@
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "AI Assistant"
+ "title": "AI Report"
 }

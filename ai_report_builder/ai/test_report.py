@@ -5,7 +5,7 @@ import json
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from ai_report_builder.ai.report import save_as_report
+from ai_report_builder.ai.report import save_as_report, update_native_report
 
 PREFIX = "ZZ AI Report"
 
@@ -89,6 +89,30 @@ class TestSaveAsReport(FrappeTestCase):
         b = save_as_report(p, f"{PREFIX} Dup")
         self.assertNotEqual(a["report_name"], b["report_name"])
         self.assertIn("(2)", b["report_name"])
+
+    def test_update_native_report_rewrites_json(self):
+        res = save_as_report(
+            {"doctype": "Sales Invoice", "fields": ["name", "customer"],
+             "filters": [["status", "=", "Unpaid"]]},
+            f"{PREFIX} ToRefine",
+        )
+        # Refine: add a filter + change columns.
+        ok = update_native_report(
+            res["report_name"],
+            {"doctype": "Sales Invoice", "fields": ["name", "customer", "status"],
+             "filters": [["status", "in", ["Unpaid", "Overdue"]]]},
+        )
+        self.assertTrue(ok)
+        j = json.loads(frappe.get_doc("Report", res["report_name"]).json)
+        self.assertEqual(j["filters"], [["Sales Invoice", "status", "in", ["Unpaid", "Overdue"]]])
+        self.assertIn("status", [c[0] for c in j["columns"]])
+
+    def test_update_native_report_skips_grouped(self):
+        res = save_as_report({"doctype": "Customer", "fields": ["name"]}, f"{PREFIX} G")
+        self.assertFalse(
+            update_native_report(res["report_name"],
+                                 {"doctype": "Customer", "fields": ["name"], "group_by": "customer_group"})
+        )
 
     def test_sensitive_field_dropped_from_columns(self):
         # Customer.tax_id is seeded sensitive → must not become a column.

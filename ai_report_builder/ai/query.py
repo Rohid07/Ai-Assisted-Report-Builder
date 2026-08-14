@@ -16,7 +16,11 @@ from ai_report_builder.ai.executor import (
     get_allowed_doctypes,
     get_sensitive_fields,
 )
-from ai_report_builder.ai.prompts import RUN_QUERY_TOOL, SYSTEM_PROMPT_QUERY
+from ai_report_builder.ai.prompts import (
+    REFINE_PROMPT,
+    RUN_QUERY_TOOL,
+    SYSTEM_PROMPT_QUERY,
+)
 from ai_report_builder.ai.provider import get_provider_chain
 from ai_report_builder.ai.router import keyword_route
 
@@ -203,6 +207,44 @@ def _clean_history(history):
         if role in ("user", "assistant") and isinstance(content, str) and content.strip():
             clean.append({"role": role, "content": content})
     return clean[-HISTORY_TURNS:]
+
+
+def refine_query(current_params, instruction, provider=None):
+    """Modify an existing query per a natural-language instruction. Returns
+    {query_params, result, error}. Reuses the constrained run_query tool, so
+    the refined query is validated and permission-safe like any other."""
+    chain = get_provider_chain(provider)
+    doctype = current_params.get("doctype")
+    schema_context = get_schema_context(only=doctype) + "\n\n" + date_context()
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT_QUERY.format(schema_context=schema_context)},
+        {
+            "role": "user",
+            "content": REFINE_PROMPT.format(
+                current=json.dumps(current_params), instruction=instruction
+            ),
+        },
+    ]
+
+    for _ in range(2):
+        msg = _complete(chain, messages, tools=[RUN_QUERY_TOOL])
+        args = None
+        if msg.tool_calls:
+            for tc in msg.tool_calls:
+                if tc.function.name == "run_query":
+                    args = json.loads(tc.function.arguments or "{}")
+                    break
+        if args is None:
+            args = _extract_tool_args(msg.content or "")
+        if args:
+            args["doctype"] = doctype  # never let refinement switch doctype
+            result = _safe_execute(instruction, args)
+            audit("refine", instruction, params=args,
+                  denial=result.get("error") if result else None)
+            return {"query_params": args, "result": result, "error": result.get("error")}
+        messages.append({"role": "user", "content": "Call the run_query tool with the updated query."})
+
+    return {"query_params": current_params, "result": None, "error": "could_not_refine"}
 
 
 def answer_question(question, provider=None, history=None, max_tool_rounds=3):

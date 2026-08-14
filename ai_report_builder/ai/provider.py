@@ -14,11 +14,13 @@ PROVIDER_CONFIG = {
         "base_url": "https://api.groq.com/openai/v1",
         "model": "llama-3.3-70b-versatile",
         "key_field": "groq_api_key",
+        "timeout": 60,
     },
     "OpenRouter": {
         "base_url": "https://openrouter.ai/api/v1",
         "model": "qwen/qwen3-8b:free",
         "key_field": "openrouter_api_key",
+        "timeout": 90,  # free tier can be slow to start
     },
     "Gemini": {
         # Google's OpenAI-compatible endpoint (free tier via AI Studio key).
@@ -27,18 +29,21 @@ PROVIDER_CONFIG = {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "model": "gemini-flash-latest",
         "key_field": "gemini_api_key",
+        "timeout": 60,
     },
     "Cerebras": {
         # Generous free tier, fast, OpenAI-compatible, strong tool calling.
         "base_url": "https://api.cerebras.ai/v1",
         "model": "gpt-oss-120b",
         "key_field": "cerebras_api_key",
+        "timeout": 60,
     },
     "Ollama": {
         "base_url": "http://localhost:11434/v1",
         # Small tool-capable model chosen for low-RAM / CPU-only hosts.
         "model": "qwen2.5:3b",
         "key_field": None,
+        "timeout": 120,  # local models can take time to first load
     },
 }
 
@@ -52,7 +57,11 @@ def _make_client(name, settings):
         api_key = "ollama"  # local server ignores the key
     if not api_key:
         return None
-    return OpenAI(api_key=api_key, base_url=cfg["base_url"]), cfg["model"], name
+    return OpenAI(
+        api_key=api_key,
+        base_url=cfg["base_url"],
+        timeout=cfg.get("timeout", 60),
+    ), cfg["model"], name
 
 
 def get_client(provider=None):

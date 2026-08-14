@@ -100,6 +100,7 @@ def execute_run_query(
     aggregate_field=None,
     order_by=None,
     limit=50,
+    limit_cap=200,
 ):
     # §4.4 allow-list, then §4.2/§4.6 permission gate. get_list ALSO enforces
     # permission, but we fail early & clean with a structured error.
@@ -109,7 +110,7 @@ def execute_run_query(
 
     filters = normalize_filters(filters)
     validate_filters(filters)
-    limit = min(limit or 50, 200)
+    limit = min(limit or 50, limit_cap or 200)
 
     valid = _valid_fieldnames(doctype)
     sensitive = get_sensitive_fields(doctype)

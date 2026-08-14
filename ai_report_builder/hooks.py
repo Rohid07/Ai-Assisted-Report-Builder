@@ -117,13 +117,15 @@ after_install = "ai_report_builder.install.after_install"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"AI Report": "ai_report_builder.permissions.get_ai_report_query_conditions",
+	"AI Chat Message": "ai_report_builder.permissions.get_ai_chat_message_query_conditions",
+}
+
+has_permission = {
+	"AI Report": "ai_report_builder.permissions.has_ai_report_permission",
+	"AI Chat Message": "ai_report_builder.permissions.has_ai_chat_message_permission",
+}
 
 # DocType Class
 # ---------------

@@ -73,6 +73,7 @@ def ask(question, provider=None, session=None):
         result = answer_question(question, provider=provider, history=history)
     except APIError:
         # Every configured provider failed (rate limit / quota / dead model).
+        frappe.local.message_log = []
         result = {
             "answer": frappe._(
                 "All configured AI providers are currently unavailable "
@@ -83,6 +84,18 @@ def ask(question, provider=None, session=None):
             "rows": [],
             "query_params": {},
             "error": "provider_unavailable",
+        }
+    except Exception as e:
+        # Misconfiguration (no key, bad provider) or an unexpected failure:
+        # return a clean message instead of a 500.
+        frappe.local.message_log = []  # suppress the leaked frappe.throw modal
+        frappe.logger("ai_report_builder").error(f"ask failed: {e}")
+        detail = str(e).strip() or frappe._("Something went wrong — please try again.")
+        result = {
+            "answer": frappe._("I couldn't process that. {0}").format(detail),
+            "rows": [],
+            "query_params": {},
+            "error": "server_error",
         }
 
     shaped = _shape_result(result)

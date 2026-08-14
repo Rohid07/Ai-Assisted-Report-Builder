@@ -22,6 +22,18 @@ Schema context for this session:
 {schema_context}
 """
 
+REFINE_PROMPT = """You are refining an EXISTING ERPNext data query based on a change request.
+
+Current query (JSON):
+{current}
+
+Change requested: {instruction}
+
+Call the run_query tool with the FULL updated query. Keep everything from the
+current query except what the change request modifies (e.g. add/remove a column,
+change/add/remove a filter, change sorting or grouping). Always keep the same
+doctype. Only use fields from the schema context."""
+
 INSIGHTS_PROMPT = """You are a business analyst. Given a question and the ACTUAL result
 rows below, write 2-4 short, concrete insights: notable totals, top/bottom items,
 trends, and any anomalies or outliers.

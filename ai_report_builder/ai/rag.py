@@ -25,7 +25,7 @@ def _embed(texts):
     try:
         from openai import OpenAI
 
-        client = OpenAI(api_key="ollama", base_url=EMBED_URL)
+        client = OpenAI(api_key="ollama", base_url=EMBED_URL, timeout=60)
         resp = client.embeddings.create(model=EMBED_MODEL, input=texts)
         return [d.embedding for d in resp.data]
     except Exception:
