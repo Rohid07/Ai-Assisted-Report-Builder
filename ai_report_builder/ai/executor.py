@@ -44,6 +44,21 @@ def check_allowlist(doctype):
         frappe.throw(f"Doctype '{doctype}' is not enabled for the assistant.")
 
 
+def normalize_filters(filters):
+    """Unwrap over-nested filter lists the model sometimes emits, e.g.
+    [[[["field", ">", 0]]]] -> [["field", ">", 0]]. Frappe expects a list of
+    [field, op, value] (or [doctype, field, op, value]) rows."""
+    while (
+        isinstance(filters, list)
+        and len(filters) == 1
+        and isinstance(filters[0], list)
+        and len(filters[0]) > 0
+        and isinstance(filters[0][0], list)
+    ):
+        filters = filters[0]
+    return filters
+
+
 def validate_filters(filters):
     """§7 — hardened to reject non-list rows and unsupported operators."""
     for f in filters or []:
@@ -85,6 +100,7 @@ def execute_run_query(
     aggregate_field=None,
     order_by=None,
     limit=50,
+    limit_cap=200,
 ):
     # §4.4 allow-list, then §4.2/§4.6 permission gate. get_list ALSO enforces
     # permission, but we fail early & clean with a structured error.
@@ -92,17 +108,23 @@ def execute_run_query(
     if not frappe.has_permission(doctype, "read"):
         return {"error": "permission_denied", "doctype": doctype}
 
+    filters = normalize_filters(filters)
     validate_filters(filters)
-    limit = min(limit or 50, 200)
+    limit = min(limit or 50, limit_cap or 200)
 
     valid = _valid_fieldnames(doctype)
     sensitive = get_sensitive_fields(doctype)
 
     # Validate group_by / order_by / aggregate_field against meta (anti-injection).
     if group_by:
-        _validate_plain_field(group_by, valid, sensitive, doctype)
+        _validate_plain_field(group_by.split()[0], valid, sensitive, doctype)
     if order_by:
-        _validate_plain_field(order_by, valid, sensitive, doctype)
+        # order_by is "fieldname [asc|desc]" — validate only the field part.
+        parts = order_by.split()
+        _validate_plain_field(parts[0], valid, sensitive, doctype)
+        direction = parts[1].lower() if len(parts) > 1 else "asc"
+        if direction not in ("asc", "desc"):
+            frappe.throw(f"Invalid sort direction: {parts[1]}")
 
     if aggregate_function:
         if aggregate_function not in AGG_FUNCS:

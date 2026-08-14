@@ -1,0 +1,26 @@
+{
+ "content": null,
+ "creation": "2026-08-10 12:36:08.056059",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-08-14 10:29:04.645355",
+ "modified_by": "Administrator",
+ "module": "AI Report Builder",
+ "name": "ai-assistant",
+ "owner": "Administrator",
+ "page_name": "ai-assistant",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "All"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "AI Assistant"
+}

@@ -22,6 +22,56 @@ Schema context for this session:
 {schema_context}
 """
 
+REFINE_PROMPT = """You are refining an EXISTING ERPNext data query based on a change request.
+
+Current query (JSON):
+{current}
+
+Change requested: {instruction}
+
+Call the run_query tool with the FULL updated query. Keep everything from the
+current query except what the change request modifies (e.g. add/remove a column,
+change/add/remove a filter, change sorting or grouping). Always keep the same
+doctype. Only use fields from the schema context."""
+
+INSIGHTS_PROMPT = """You are a business analyst. Given a question and the ACTUAL result
+rows below, write 2-4 short, concrete insights: notable totals, top/bottom items,
+trends, and any anomalies or outliers.
+
+Strict rules:
+- Use ONLY the numbers and values present in the data. Never invent figures.
+- Be specific (cite the actual values). No preamble, no generic advice.
+- Format as short bullet points starting with "- ".
+- If the data is too sparse for meaningful insight, say so in one line.
+
+Question: {question}
+Data ({row_count} rows shown): {rows}"""
+
+DOC_ANSWER_PROMPT = """You are an ERPNext help assistant. Answer the user's "how do I"
+question using ONLY the documentation context below. If the context does not contain
+the answer, say you don't have that information — do not guess.
+
+Cite the source titles you used in a final line like: Sources: <title>, <title>.
+
+Documentation context:
+{context}
+
+Question: {question}"""
+
+REPORT_METADATA_PROMPT = """You are naming and describing a saved ERPNext report based on a
+question that was already answered successfully.
+
+Given the original question and the query parameters used, respond
+in this exact JSON shape and nothing else:
+{{
+  "report_name": "<concise title, under 8 words, sentence case>",
+  "description": "<one sentence describing what this report shows>"
+}}
+
+Original question: {question}
+Query used: doctype={doctype}, filters={filters}, fields={fields},
+group_by={group_by}, order_by={order_by}"""
+
 RUN_QUERY_TOOL = {
     "type": "function",
     "function": {

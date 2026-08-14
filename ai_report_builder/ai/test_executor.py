@@ -8,7 +8,11 @@ correct numbers — all through the single permission-safe get_list path.
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from ai_report_builder.ai.executor import execute_run_query, validate_filters
+from ai_report_builder.ai.executor import (
+    execute_run_query,
+    normalize_filters,
+    validate_filters,
+)
 
 PREFIX = "ZZAITEST"
 NOACCESS_USER = "aitest_noaccess@example.com"
@@ -61,6 +65,23 @@ class TestRunQueryExecutor(FrappeTestCase):
         with self.assertRaises(frappe.ValidationError):
             validate_filters([["customer_name", "DROP", "x"]])
 
+    def test_normalize_over_nested_filters(self):
+        # [[[["f",">",0]]]] -> [["f",">",0]]
+        self.assertEqual(
+            normalize_filters([[[["outstanding_amount", ">", 0]]]]),
+            [["outstanding_amount", ">", 0]],
+        )
+        # [[c1, c2]] -> [c1, c2]
+        self.assertEqual(
+            normalize_filters([[["a", "<", 1], ["b", ">", 2]]]),
+            [["a", "<", 1], ["b", ">", 2]],
+        )
+        # already-flat is unchanged
+        self.assertEqual(
+            normalize_filters([["a", "=", 1]]), [["a", "=", 1]]
+        )
+        self.assertEqual(normalize_filters([]), [])
+
     def test_unlisted_doctype_raises(self):
         with self.assertRaises(frappe.ValidationError):
             execute_run_query("User", fields=["name"])  # not on allow-list
@@ -82,6 +103,20 @@ class TestRunQueryExecutor(FrappeTestCase):
         )
         self.assertEqual(res["count"], 0)
         self.assertEqual(res["rows"], [])
+
+    def test_order_by_with_direction(self):
+        # "field desc" is valid — must not be rejected as an unknown field.
+        res = execute_run_query(
+            "Customer",
+            fields=["name"],
+            filters=[["customer_name", "like", f"{PREFIX}%"]],
+            order_by="creation desc",
+        )
+        self.assertEqual(res["count"], 3)
+
+    def test_order_by_bad_field_rejected(self):
+        with self.assertRaises(frappe.ValidationError):
+            execute_run_query("Customer", fields=["name"], order_by="nope desc")
 
     def test_aggregation_count_returns_correct_number(self):
         res = execute_run_query(

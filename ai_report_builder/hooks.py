@@ -117,13 +117,15 @@ after_install = "ai_report_builder.install.after_install"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"AI Report": "ai_report_builder.permissions.get_ai_report_query_conditions",
+	"AI Chat Message": "ai_report_builder.permissions.get_ai_chat_message_query_conditions",
+}
+
+has_permission = {
+	"AI Report": "ai_report_builder.permissions.has_ai_report_permission",
+	"AI Chat Message": "ai_report_builder.permissions.has_ai_chat_message_permission",
+}
 
 # DocType Class
 # ---------------
@@ -137,13 +139,11 @@ after_install = "ai_report_builder.install.after_install"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"AI Assistant Settings": {
+		"on_update": "ai_report_builder.ai.query.clear_schema_cache"
+	}
+}
 
 # Scheduled Tasks
 # ---------------
